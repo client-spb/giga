@@ -1,7 +1,9 @@
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Security.Authentication;
 using Giga3DApp.Models;
 
 namespace Giga3DApp.Services;
@@ -18,7 +20,24 @@ public sealed class GigaChatClient
 
     public GigaChatClient(HttpClient? httpClient = null)
     {
-        _httpClient = httpClient ?? new HttpClient();
+        if (httpClient is not null)
+        {
+            _httpClient = httpClient;
+            return;
+        }
+
+        var handler = new HttpClientHandler
+        {
+            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
+            AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate
+        };
+
+        _httpClient = new HttpClient(handler)
+        {
+            Timeout = TimeSpan.FromSeconds(60)
+        };
+
+        ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
     }
 
     public async Task<string> GetAccessTokenAsync(CancellationToken cancellationToken = default)

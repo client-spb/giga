@@ -1,0 +1,13 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Build Giga3DApp Release EXE",
+			"type": "shell",
+			"command": "cd /workspaces/giga/Giga3DApp && dotnet publish Giga3DApp.csproj -c Release -r win-x64 --self-contained true -p:EnableWindowsTargeting=true -p:UseSharedCompilation=false -o ./bin/Publish/Win64",
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "build"
+		}
+	]
+}

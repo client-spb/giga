@@ -112,7 +112,13 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            StatusText.Text = $"Ошибка при загрузке моделей: {ex.Message}";
+            var message = ex.Message;
+            if (ex.InnerException is not null)
+            {
+                message += $" | Внутренняя ошибка: {ex.InnerException.Message}";
+            }
+
+            StatusText.Text = $"Ошибка при загрузке моделей: {message}";
         }
         finally
         {
@@ -162,7 +168,13 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            StatusText.Text = $"Ошибка генерации: {ex.Message}";
+            var message = ex.Message;
+            if (ex.InnerException is not null)
+            {
+                message += $" | Внутренняя ошибка: {ex.InnerException.Message}";
+            }
+
+            StatusText.Text = $"Ошибка генерации: {message}";
         }
         finally
         {
