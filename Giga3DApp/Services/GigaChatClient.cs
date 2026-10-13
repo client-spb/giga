@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Security.Authentication;
 using System.IO;
+using System.Text.RegularExpressions;
 using Giga3DApp.Models;
 
 namespace Giga3DApp.Services;
@@ -15,7 +16,6 @@ public sealed class GigaChatClient
     private const string ClientId = "e1069776-c3b5-492e-b149-051f189e63b8";
     private const string Scope = "GIGACHAT_API_PERS";
     private const string OauthUrl = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth";
-    private const string ApiRoot = "https://api.giga.chat";
     private const string BaseUrl = "https://api.giga.chat/v1";
 
     private readonly HttpClient _httpClient;
@@ -112,14 +112,13 @@ public sealed class GigaChatClient
                 new
                 {
                     role = "user",
-                    content = new[] { new { text = promptText } }
+                    content = promptText
                 }
             },
-            tool_config = new { mode = "forced", tool_name = "model_3d_generate" },
-            tools = new[] { new { model_3d_generate = new { } } }
+            function_call = new { name = "text2model3d" }
         };
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, $"{ApiRoot}/v2/chat/completions");
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{BaseUrl}/chat/completions");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         request.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
 
@@ -132,7 +131,8 @@ public sealed class GigaChatClient
         }
 
         using var document = JsonDocument.Parse(body);
-        var fileId = FindGeneratedModelFileId(document.RootElement);
+        var fileId = FindGeneratedModelFileId(document.RootElement)
+            ?? FindGeneratedModelFileId(document.RootElement.GetRawText());
         if (string.IsNullOrWhiteSpace(fileId))
         {
             throw new InvalidOperationException($"GigaChat завершил ответ без файла 3D-модели. Ответ API: {body}");
@@ -199,6 +199,12 @@ public sealed class GigaChatClient
         }
 
         return null;
+    }
+
+    private static string? FindGeneratedModelFileId(string responseText)
+    {
+        var match = Regex.Match(responseText, "(?:src|file_id|fileId)\\s*[=:]\\s*[\\\"'](?<id>[^\\\"']+)", RegexOptions.IgnoreCase);
+        return match.Success ? match.Groups["id"].Value : null;
     }
 }
 
