@@ -9,12 +9,6 @@ namespace Giga3DApp.Services;
 
 public static class ThreeDAssetBuilder
 {
-    public static async Task<string> BuildFromPromptAsync(string promptText, string modelId, GigaChatClient client, string outputDirectory)
-    {
-        var responseJson = await client.GenerateAssetSpecAsync(modelId, promptText);
-        return BuildFromGeneratedSpec(responseJson, outputDirectory);
-    }
-
     public static string BuildFromGeneratedSpec(string responseJson, string outputDirectory)
     {
         Directory.CreateDirectory(outputDirectory);

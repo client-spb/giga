@@ -1,5 +1,5 @@
 ﻿using System.IO;
-using System.Text.Json;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
@@ -12,9 +12,7 @@ public partial class MainWindow : Window
 {
     private readonly GigaChatClient _client = new();
     private List<GigaChatModel> _models = new();
-    private string _latestAssetFolder = string.Empty;
-    private string _latestAssetJson = string.Empty;
-    private string _latestAssetName = "GeneratedAsset";
+    private string _latestModelPath = string.Empty;
 
     public MainWindow()
     {
@@ -98,8 +96,7 @@ public partial class MainWindow : Window
             ModelComboBox.ItemsSource = _models.Select(m => m.Id).ToList();
             ModelComboBox.IsEnabled = _models.Count > 0;
             GenerateButton.IsEnabled = _models.Count > 0;
-            ExportObjButton.IsEnabled = false;
-            ExportGltfButton.IsEnabled = false;
+            OpenModelButton.IsEnabled = false;
 
             if (_models.Count == 0)
             {
@@ -143,28 +140,19 @@ public partial class MainWindow : Window
         try
         {
             GenerateButton.IsEnabled = false;
+            OpenModelButton.IsEnabled = false;
             StatusText.Text = "Отправляю запрос в GigaChat и строю 3D-модель...";
 
             var outputFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "GigaChat3DAssets");
             Directory.CreateDirectory(outputFolder);
-            _latestAssetFolder = outputFolder;
+            StatusText.Text = "GigaChat создаёт 3D-модель. Это может занять некоторое время...";
+            var generatedModel = await _client.Generate3DModelAsync(selectedModelId, PromptTextBox.Text, outputFolder);
+            _latestModelPath = generatedModel.FilePath;
 
-            _latestAssetJson = await _client.GenerateAssetSpecAsync(selectedModelId, PromptTextBox.Text);
-            var objPath = ThreeDAssetBuilder.BuildFromGeneratedSpec(_latestAssetJson, outputFolder);
-            var generatedAsset = JsonSerializer.Deserialize<GeneratedAssetSpec>(_latestAssetJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new GeneratedAssetSpec();
-            _latestAssetName = string.IsNullOrWhiteSpace(generatedAsset.AssetName) ? "GeneratedAsset" : generatedAsset.AssetName;
-
-            var folderName = Path.GetDirectoryName(objPath) ?? outputFolder;
-            OutputPathText.Text = $"Путь к файлам: {folderName}";
-            StatusText.Text = $"3D-ассет успешно создан: {objPath}\nФайлы рядом: OBJ, MTL, PNG-текстура и glTF.";
-
-            var previewModel = ThreeDAssetBuilder.CreatePreviewModel(_latestAssetJson);
-            Viewport.Children.Clear();
-            SetupViewport();
-            Viewport.Children.Add(previewModel);
-
-            ExportObjButton.IsEnabled = true;
-            ExportGltfButton.IsEnabled = true;
+            OutputPathText.Text = $"Файл: {_latestModelPath}";
+            StatusText.Text = $"GigaChat создал 3D-модель ({generatedModel.MediaType}). Файл сохранён: {_latestModelPath}";
+            PreviewHint.Text = "Модель создана самим GigaChat и сохранена в исходном формате. Нажмите «Открыть 3D-файл», чтобы просмотреть её.";
+            OpenModelButton.IsEnabled = true;
         }
         catch (Exception ex)
         {
@@ -182,35 +170,21 @@ public partial class MainWindow : Window
         }
     }
 
-    private void ExportObjButton_Click(object sender, RoutedEventArgs e)
+    private void OpenModelButton_Click(object sender, RoutedEventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(_latestAssetJson))
+        if (string.IsNullOrWhiteSpace(_latestModelPath) || !File.Exists(_latestModelPath))
         {
-            StatusText.Text = "Сначала сгенерируйте 3D-модель.";
+            StatusText.Text = "Файл модели не найден. Сначала сгенерируйте 3D-модель ещё раз.";
             return;
         }
 
-        var objPath = Path.Combine(_latestAssetFolder, $"{_latestAssetName}.obj");
-        if (File.Exists(objPath))
+        try
         {
-            StatusText.Text = $"OBJ уже экспортирован: {objPath}";
-            return;
+            Process.Start(new ProcessStartInfo(_latestModelPath) { UseShellExecute = true });
         }
-
-        ThreeDAssetBuilder.BuildFromGeneratedSpec(_latestAssetJson, _latestAssetFolder);
-        StatusText.Text = $"OBJ экспортирован: {Path.Combine(_latestAssetFolder, $"{_latestAssetName}.obj")}";
-    }
-
-    private void ExportGltfButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (string.IsNullOrWhiteSpace(_latestAssetJson))
+        catch (Exception ex)
         {
-            StatusText.Text = "Сначала сгенерируйте 3D-модель.";
-            return;
+            StatusText.Text = $"Не удалось открыть модель: {ex.Message}. Файл сохранён по адресу: {_latestModelPath}";
         }
-
-        var gltfPath = Path.Combine(_latestAssetFolder, $"{_latestAssetName}.gltf");
-        ThreeDAssetBuilder.ExportGltf(_latestAssetJson, _latestAssetFolder, _latestAssetName);
-        StatusText.Text = $"glTF экспортирован: {gltfPath}";
     }
 }

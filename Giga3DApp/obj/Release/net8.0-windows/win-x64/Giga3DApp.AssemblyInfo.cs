@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Giga3DApp")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3c17829a21da13a260fd47d17b05b24967c6ae97")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0edcf519112045d8600057f17e0061d3adc91179")]
 [assembly: System.Reflection.AssemblyProductAttribute("Giga3DApp")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Giga3DApp")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
